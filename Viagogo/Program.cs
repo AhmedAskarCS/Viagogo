@@ -4,34 +4,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Caching;
 using System.Threading;
-
-namespace ExtensionMethod
-{
-    public static class Event
-    {
+using Viagogo;
 
 
-        public static IEnumerable GetEvents()
-        {
-            ObjectCache cache = MemoryCache.Default;
-
-            if (cache.Contains(CacheKey))
-                return (IEnumerable)cache.Get(CacheKey);
-            else
-            {
-                IEnumerable availableStocks = this.GetDefaultStocks();
-
-                // Store data in the cache    
-                CacheItemPolicy cacheItemPolicy = new CacheItemPolicy();
-                cacheItemPolicy.AbsoluteExpiration = DateTime.Now.AddHours(1.0);
-                cache.Add(CacheKey, availableStocks, cacheItemPolicy);
-
-                return availableStocks;
-            }
-        }
-    }
-}
 namespace Viagogo
 {
 
@@ -40,8 +17,8 @@ namespace Viagogo
         public string Name { get; set; }
         public string City { get; set; }
 
+    
 
-      
     }
     public class Customer
     {
@@ -125,9 +102,15 @@ new Event{ Name = "LadyGaGa", City = "New York"}};
             //1.  What should be your approach to getting the distance between the customer’s city and the other cities on the list?
 
             //2.  How would you get the 5 closest events and how would you send them to the client in an email?
-            var lst = (from selectedevents in events
-                       orderby GetDistance(customer.City, selectedevents.City) ascending
-                       select selectedevents).Take(5).ToList();
+            foreach (var cus in customers) {
+                var lst = (from selectedevents in events
+                           orderby GetDistance(cus.City, selectedevents.City) ascending
+                           select selectedevents).Take(5).ToList();
+                foreach (var eve in lst)
+                {
+                    AddToEmail(cus, eve);
+                }
+            }
             int count = 0;
             customers.ForEach(customer =>
             {
@@ -176,7 +159,7 @@ new Event{ Name = "Metallica", City = "Boston"}
 
                 (from selectedevents in events
 
-                 orderby Retry.Do(() => GetDistance(customer.City, selectedevents.City), TimeSpan.FromSeconds(1))
+                 orderby (Retry.Do(() => GetDistance(customer.City, selectedevents.City), TimeSpan.FromSeconds(1))) ,customer.Name
                  select selectedevents).Take(5).ToList().ForEach(x =>
                       {
                           Console.WriteLine(count++);
@@ -185,13 +168,25 @@ new Event{ Name = "Metallica", City = "Boston"}
 
             });
 
-            Retry.Do(() => GetDistance("", ""), TimeSpan.FromSeconds(1));
+
             //4. If the GetDistance method can fail, we don't want the process to fail. What can be done? Code it. (Ask clarifying questions to be clear about what is expected business-wise)
-
+            var res = Retry.Do(() => GetDistance("", ""), TimeSpan.FromSeconds(1));
             //5. If we also want to sort the resulting events by other fields like price, etc.to determine which ones to send to the customer, how would you implement it? Code it.
+            //if the event has a price
+            events.OrderBy(x => x.Name).ThenBy(x => x.City);
+            customers.ForEach(customer =>
+            {
 
+                (from selectedevents in events
 
+                 orderby (Retry.Do(() => GetDistance(customer.City, selectedevents.City), TimeSpan.FromSeconds(1))), customer.Name
+                 select selectedevents).Take(5).ToList().ForEach(x =>
+                 {
+                     Console.WriteLine(count++);
+                     AddToEmail(new Customer { Name = customer.Name, City = x.City }, new Event { Name = x.Name, City = x.City });
+                 });
 
+            });
             // 1. TASK
 
             /*
