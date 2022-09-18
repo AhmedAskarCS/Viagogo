@@ -43,6 +43,7 @@ new Event{ Name = "LadyGaGa", City = "San Francisco"},
 new Event{ Name = "LadyGaGa", City = "Washington"} };
             //1. find out all events that arein cities of customer // then add to email.
             var customer = new Customer { Name = "Mr. Fake", City = "New York" };
+            var lstEvents = (from targetedEvents in events where targetedEvents.City == customer.City select targetedEvents);
 
             var customers = new List<Customer>{
 new Customer{ Name = "Mr.Los Angeles", City = "Los Angeles"},
@@ -54,6 +55,14 @@ new Customer{ Name = "Mr.Washington", City = "Washington"} };
             //            1.Imagine this is the interface or an API, so you don't care how he works. You just need to know that you need to call this function to add an event to the email that you want to send to the customer. The function takes two parameters as the input: the customer and the event. So thefirst task here is to prepare the email for this customer in the main function to send all the events.
             //Write a code to add all events in the customer's location to the email. Considering the objects shared above:
             //1.  What should be your approach to getting the list of events?
+
+
+            var selclst = (from selectedeevnt in events join selectedcust in customers on selectedeevnt.City equals selectedcust.City into temp
+select temp).Distinct();
+
+
+
+
             var query = (from selectedevents in customers
                          join selctedcustomer in events
                               on selectedevents.City equals selctedcustomer.City into temp
@@ -133,7 +142,7 @@ new Event{ Name = "LadyGaGa", City = "New York"}};
                  orderby GetDistance(customer.City, selectedevents.City)
                  select selectedevents).Take(5).ToList().ForEach(x =>
        {
-
+           AddToEmail(customer, x);
            AddToEmail(new Customer { Name = customer.Name, City = x.City }, new Event { Name = x.Name, City = x.City });
        });
 
@@ -167,20 +176,20 @@ new Event{ Name = "Metallica", City = "Boston"}
             //3. If the GetDistance method is an API call which could fail or is too expensive, how will u improve the code written in 2? Write the code.
 
             //Cache the Data 
-            
-                    customers.ForEach(customer =>
-                    {
 
-                        (from selectedevents in events
+            customers.ForEach(customer =>
+            {
 
-                         orderby GetCacheDistance(customer.City, selectedevents.City)
-                         select selectedevents).Take(5).ToList().ForEach(x =>
-                         {
+                (from selectedevents in events
 
-                             AddToEmail(new Customer { Name = customer.Name, City = x.City }, new Event { Name = x.Name, City = x.City });
-                         });
+                 orderby GetCacheDistance(customer.City, selectedevents.City)
+                 select selectedevents).Take(5).ToList().ForEach(x =>
+                 {
 
-                    });
+                     AddToEmail(new Customer { Name = customer.Name, City = x.City }, new Event { Name = x.Name, City = x.City });
+                 });
+
+            });
             //customers.ForEach(customer =>
             //{
             //    if (Dict.ContainsKey($"{customer.City}  {selectedevents.City}"))
@@ -290,14 +299,14 @@ new Event{ Name = "Metallica", City = "Boston"}
                 {
                     return GetDistance(fromCity, toCity);
                 }
-                catch 
+                catch
                 {
                     return int.MaxValue;
                 }
-               
+
             }
 
-           
+
         }
         /*
        var customers = new List<Customer>{
